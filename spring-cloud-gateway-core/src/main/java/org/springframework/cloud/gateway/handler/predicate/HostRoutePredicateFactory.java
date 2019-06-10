@@ -1,18 +1,17 @@
 /*
- * Copyright 2013-2017 the original author or authors.
+ * Copyright 2013-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package org.springframework.cloud.gateway.handler.predicate;
@@ -35,7 +34,8 @@ import org.springframework.web.server.ServerWebExchange;
 /**
  * @author Spencer Gibb
  */
-public class HostRoutePredicateFactory extends AbstractRoutePredicateFactory<HostRoutePredicateFactory.Config> {
+public class HostRoutePredicateFactory
+		extends AbstractRoutePredicateFactory<HostRoutePredicateFactory.Config> {
 
 	private PathMatcher pathMatcher = new AntPathMatcher(".");
 
@@ -62,11 +62,11 @@ public class HostRoutePredicateFactory extends AbstractRoutePredicateFactory<Hos
 		return exchange -> {
 			String host = exchange.getRequest().getHeaders().getFirst("Host");
 			Optional<String> optionalPattern = config.getPatterns().stream()
-					.filter(pattern -> this.pathMatcher.match(pattern, host))
-					.findFirst();
+					.filter(pattern -> this.pathMatcher.match(pattern, host)).findFirst();
 
 			if (optionalPattern.isPresent()) {
-				Map<String, String> variables = this.pathMatcher.extractUriTemplateVariables(optionalPattern.get(), host);
+				Map<String, String> variables = this.pathMatcher
+						.extractUriTemplateVariables(optionalPattern.get(), host);
 				ServerWebExchangeUtils.putUriTemplateVariables(exchange, variables);
 				return true;
 			}
@@ -77,6 +77,7 @@ public class HostRoutePredicateFactory extends AbstractRoutePredicateFactory<Hos
 
 	@Validated
 	public static class Config {
+
 		private List<String> patterns = new ArrayList<>();
 
 		@Deprecated
@@ -104,9 +105,9 @@ public class HostRoutePredicateFactory extends AbstractRoutePredicateFactory<Hos
 
 		@Override
 		public String toString() {
-			return new ToStringCreator(this)
-					.append("patterns", patterns)
-					.toString();
+			return new ToStringCreator(this).append("patterns", patterns).toString();
 		}
+
 	}
+
 }

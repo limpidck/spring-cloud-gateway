@@ -1,18 +1,17 @@
 /*
- * Copyright 2013-2017 the original author or authors.
+ * Copyright 2013-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package org.springframework.cloud.gateway.filter;
@@ -22,21 +21,18 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import reactor.core.publisher.Mono;
+
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.cloud.gateway.config.LoadBalancerProperties;
-import org.springframework.cloud.gateway.discovery.DiscoveryLocatorProperties;
 import org.springframework.cloud.gateway.support.NotFoundException;
 import org.springframework.core.Ordered;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.server.ServerWebExchange;
 
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_SCHEME_PREFIX_ATTR;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.addOriginalRequestUrl;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
-
-import reactor.core.publisher.Mono;
 
 /**
  * @author Spencer Gibb
@@ -44,14 +40,19 @@ import reactor.core.publisher.Mono;
  */
 public class LoadBalancerClientFilter implements GlobalFilter, Ordered {
 
-	private static final Log log = LogFactory.getLog(LoadBalancerClientFilter.class);
+	/**
+	 * Filter order for {@link LoadBalancerClientFilter}.
+	 */
 	public static final int LOAD_BALANCER_CLIENT_FILTER_ORDER = 10100;
+
+	private static final Log log = LogFactory.getLog(LoadBalancerClientFilter.class);
 
 	protected final LoadBalancerClient loadBalancer;
 
 	private LoadBalancerProperties properties;
 
-	public LoadBalancerClientFilter(LoadBalancerClient loadBalancer, LoadBalancerProperties properties) {
+	public LoadBalancerClientFilter(LoadBalancerClient loadBalancer,
+			LoadBalancerProperties properties) {
 		this.loadBalancer = loadBalancer;
 		this.properties = properties;
 	}
@@ -62,13 +63,15 @@ public class LoadBalancerClientFilter implements GlobalFilter, Ordered {
 	}
 
 	@Override
+	@SuppressWarnings("Duplicates")
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 		URI url = exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR);
 		String schemePrefix = exchange.getAttribute(GATEWAY_SCHEME_PREFIX_ATTR);
-		if (url == null || (!"lb".equals(url.getScheme()) && !"lb".equals(schemePrefix))) {
+		if (url == null
+				|| (!"lb".equals(url.getScheme()) && !"lb".equals(schemePrefix))) {
 			return chain.filter(exchange);
 		}
-		//preserve the original url
+		// preserve the original url
 		addOriginalRequestUrl(exchange, url);
 
 		log.trace("LoadBalancerClientFilter url before: " + url);
@@ -76,11 +79,8 @@ public class LoadBalancerClientFilter implements GlobalFilter, Ordered {
 		final ServiceInstance instance = choose(exchange);
 
 		if (instance == null) {
-			String msg = "Unable to find instance for " + url.getHost();
-			if(properties.isUse404()) {
-				throw new FourOFourNotFoundException(msg);
-			}
-			throw new NotFoundException(msg);
+			throw NotFoundException.create(properties.isUse404(),
+					"Unable to find instance for " + url.getHost());
 		}
 
 		URI uri = exchange.getRequest().getURI();
@@ -92,7 +92,8 @@ public class LoadBalancerClientFilter implements GlobalFilter, Ordered {
 			overrideScheme = url.getScheme();
 		}
 
-		URI requestUrl = loadBalancer.reconstructURI(new DelegatingServiceInstance(instance, overrideScheme), uri);
+		URI requestUrl = loadBalancer.reconstructURI(
+				new DelegatingServiceInstance(instance, overrideScheme), uri);
 
 		log.trace("LoadBalancerClientFilter url chosen: " + requestUrl);
 		exchange.getAttributes().put(GATEWAY_REQUEST_URL_ATTR, requestUrl);
@@ -100,17 +101,14 @@ public class LoadBalancerClientFilter implements GlobalFilter, Ordered {
 	}
 
 	protected ServiceInstance choose(ServerWebExchange exchange) {
-		return loadBalancer.choose(((URI) exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR)).getHost());
-	}
-	@ResponseStatus(value = NOT_FOUND, reason = "The service was not found.")
-	static class FourOFourNotFoundException extends RuntimeException {
-		public FourOFourNotFoundException(String msg) {
-			super(msg);
-		}
+		return loadBalancer.choose(
+				((URI) exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR)).getHost());
 	}
 
 	class DelegatingServiceInstance implements ServiceInstance {
+
 		final ServiceInstance delegate;
+
 		private String overrideScheme;
 
 		DelegatingServiceInstance(ServiceInstance delegate, String overrideScheme) {
@@ -158,4 +156,5 @@ public class LoadBalancerClientFilter implements GlobalFilter, Ordered {
 		}
 
 	}
+
 }
